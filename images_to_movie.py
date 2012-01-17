@@ -4,7 +4,8 @@ import commands
 import glob
 import os
 
-assert not os.path.exists('movie.mp4')
+movie_file = 'movie.mov'
+assert not os.path.exists(movie_file)
 
 images = glob.glob('[0-9]'*4)
 size   = '500x400'
@@ -22,5 +23,6 @@ for img in images:
         print '  renaming %s to %s' % (src, dst)
         os.rename(src, dst)
 
-status, output = commands.getstatusoutput('ffmpeg -r 5 -i %04d.png movie.mp4')
+#status, output = commands.getstatusoutput('ffmpeg -r 5 -i %04d.png movie.mp4')
+status, output = commands.getstatusoutput('ffmpeg -r 5 -i %04d.png -vcodec png -pix_fmt yuv420p ' + movie_file)
 assert 0 == status
