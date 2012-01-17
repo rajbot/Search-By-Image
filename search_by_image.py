@@ -14,6 +14,7 @@ import re, commands, time
 import urllib
 import os
 import sys
+import pprint
 
 class GoogleSearchByImage :
 
@@ -40,7 +41,7 @@ class GoogleSearchByImage :
     def getHtml(self, theUrl) :
 
         #myHtml = subprocess.check_output(["curl", "-L", "-A", self.AGENT_ID, theUrl], stderr=subprocess.STDOUT)
-        curl_cmd = "curl -L -A '%s' %s" % (self.AGENT_ID, theUrl)
+        curl_cmd = "curl -L -A '%s' '%s'" % (self.AGENT_ID, theUrl)
         print curl_cmd
         status, myHtml = commands.getstatusoutput(curl_cmd)
         if 0 == status:
@@ -72,13 +73,25 @@ def capture_result(url, img_num):
     filename = 'images/%04d' % img_num
     assert not os.path.exists(filename)
     print " saving %s to %s" % (url, filename)
-    urllib.urlretrieve(url, filename)
+    #try:
+    #    urllib.urlretrieve(url, filename)
+    #except IOError:
+    #    f = open(filename, 'w') #write empty file
+    #    f.close()
+    curl_cmd = "curl -L -A '%s' '%s' --output %s" % (GoogleSearchByImage.AGENT_ID, url, filename)
+    status, myHtml = commands.getstatusoutput(curl_cmd)
+    assert 0 == status
 
 # get_similar_image()
 #_______________________________________________________________________________
-def get_similar_image(g, seen_images):
+def get_similar_image(g, seen_images, sim_images):
     similar_images = g.getSimilarImages()
-    for img in similar_images:
+    sim_images = similar_images + sim_images
+    print 'similar images:'
+    pprint.pprint(sim_images)
+    #for img in reversed(similar_images): #get least similar image first
+    for img in similar_images[3:]:        #sam suggest starting at the fourth one
+        print ' checking ' + img
         if img not in seen_images:
             seen_images.add(img)
             return img
@@ -91,10 +104,13 @@ def get_similar_image(g, seen_images):
 #_______________________________________________________________________________
 if __name__ == "__main__":
     assert 2 == len(sys.argv)
+    assert os.path.exists('images')
+
     seed_url = sys.argv[1]
     img_num = 0
     seen_images = set()
     seen_images.add(seed_url)
+    sim_images = []
 
     capture_result(seed_url, img_num)
     img_num += 1
@@ -105,18 +121,19 @@ if __name__ == "__main__":
 
         #similar_images = g.getSimilarImages()
         #seed_url = similar_images[0]
-        seed_url = get_similar_image(g, seen_images)
-        print seen_images
+        pprint.pprint(seen_images)
+        seed_url = get_similar_image(g, seen_images, sim_images)
 
         if False == seed_url:
             print "Could not find any new iamges!"
             sys.exit(0)
 
         print "got similar image %s" % seed_url
+        print
         capture_result(seed_url, img_num)
         img_num += 1
 
-        time.sleep(60)
+        time.sleep(30)
 
 """
 now run:
