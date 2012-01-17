@@ -73,32 +73,31 @@ def capture_result(url, img_num):
     filename = 'images/%04d' % img_num
     assert not os.path.exists(filename)
     print " saving %s to %s" % (url, filename)
-    #try:
-    #    urllib.urlretrieve(url, filename)
-    #except IOError:
-    #    f = open(filename, 'w') #write empty file
-    #    f.close()
+
     curl_cmd = "curl -L -A '%s' '%s' --output %s" % (GoogleSearchByImage.AGENT_ID, url, filename)
     status, myHtml = commands.getstatusoutput(curl_cmd)
-    assert 0 == status
+    if 0 != status:
+        f = open(filename, 'w') #error, write empty file
+        f.close()
+
 
 # get_similar_image()
 #_______________________________________________________________________________
 def get_similar_image(g, seen_images, sim_images):
     similar_images = g.getSimilarImages()
     sim_images = similar_images + sim_images
-    print 'similar images:'
-    pprint.pprint(sim_images)
+    #print 'similar images:'
+    #pprint.pprint(sim_images)
     #for img in reversed(similar_images): #get least similar image first
-    for img in similar_images[3:]:        #sam suggest starting at the fourth one
+    for img in sim_images[1:]:        #take the second image
         print ' checking ' + img
         if img not in seen_images:
             seen_images.add(img)
-            return img
+            return img, sim_images
         else:
             print '  already seen ' + img
 
-    return False
+    return False, sim_images
 
 # main()
 #_______________________________________________________________________________
@@ -122,7 +121,7 @@ if __name__ == "__main__":
         #similar_images = g.getSimilarImages()
         #seed_url = similar_images[0]
         pprint.pprint(seen_images)
-        seed_url = get_similar_image(g, seen_images, sim_images)
+        seed_url, sim_images = get_similar_image(g, seen_images, sim_images)
 
         if False == seed_url:
             print "Could not find any new iamges!"
