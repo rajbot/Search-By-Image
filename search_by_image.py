@@ -14,7 +14,9 @@ import re, commands, time
 import urllib
 import os
 import sys
+import json
 import pprint
+
 
 class GoogleSearchByImage :
 
@@ -67,9 +69,29 @@ class GoogleSearchByImage :
         myPageUrl += "&biw=1600&bih=825" # always keep this
         return self.GOOGLE_URL + myPageUrl
 
+# save_state()
+#_______________________________________________________________________________
+def save_state(url, img_num, seen_images):
+    d = {'url':         url,
+         'img_num':     img_num,
+         'seen_images': list(seen_images),
+        }
+
+    f = open('saved_state.json', 'w')
+    json.dump(d, f)
+    f.close()
+
+# read_state()
+#_______________________________________________________________________________
+def read_state():
+    f = open('saved_state.json')
+    d = json.load(f)
+    f.close()
+    return d['url'], d['img_num'], set(d['seen_images'])
+
 # capture_result()
 #_______________________________________________________________________________
-def capture_result(url, img_num):
+def capture_result(url, img_num, seen_images):
     filename = 'images/%04d' % img_num
     assert not os.path.exists(filename)
     print " saving %s to %s" % (url, filename)
@@ -80,15 +102,19 @@ def capture_result(url, img_num):
         f = open(filename, 'w') #error, write empty file
         f.close()
 
+    save_state(url, img_num, seen_images)
+
 
 # get_similar_image()
 #_______________________________________________________________________________
 def get_similar_image(g, seen_images, sim_images):
     similar_images = g.getSimilarImages()
+
+    # sometimes we don't get any similar images back. So let's save
+    # up to 100 of the previous similar images, just in case we get stuck.
     sim_images = similar_images + sim_images
-    #print 'similar images:'
-    #pprint.pprint(sim_images)
-    #for img in reversed(similar_images): #get least similar image first
+    sim_images = sim_images[:100]
+
     for img in sim_images[1:]:        #take the second image
         print ' checking ' + img
         if img not in seen_images:
@@ -103,7 +129,11 @@ def get_similar_image(g, seen_images, sim_images):
 #_______________________________________________________________________________
 if __name__ == "__main__":
     assert 2 == len(sys.argv)
-    assert os.path.exists('images')
+    if os.path.exists('images'):
+        if not os.path.exists('saved_state.json'):
+            sys.exit('images dir found, but no saved state file found!')
+    else:
+        os.mkdir('images')
 
     seed_url = sys.argv[1]
     img_num = 0
@@ -111,16 +141,18 @@ if __name__ == "__main__":
     seen_images.add(seed_url)
     sim_images = []
 
-    capture_result(seed_url, img_num)
-    img_num += 1
+    if os.path.exists('saved_state.json'):
+        seed_url, img_num, seen_images = read_state()
+        img_num += 1
+    else:
+        capture_result(seed_url, img_num, seen_images)
+        img_num += 1
 
     g = GoogleSearchByImage()
     while img_num < 10000:
         g.scrape(seed_url)
 
-        #similar_images = g.getSimilarImages()
-        #seed_url = similar_images[0]
-        pprint.pprint(seen_images)
+        #pprint.pprint(seen_images)
         seed_url, sim_images = get_similar_image(g, seen_images, sim_images)
 
         if False == seed_url:
@@ -129,7 +161,7 @@ if __name__ == "__main__":
 
         print "got similar image %s" % seed_url
         print
-        capture_result(seed_url, img_num)
+        capture_result(seed_url, img_num, seen_images)
         img_num += 1
 
         time.sleep(30)
