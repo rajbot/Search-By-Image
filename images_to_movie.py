@@ -43,5 +43,5 @@ for img in sorted(images):
 #status, output = commands.getstatusoutput('ffmpeg -r 5 -i processed/%04d.png -vcodec png -pix_fmt yuv420p ' + movie_file)
 
 #smaller movie
-status, output = commands.getstatusoutput('ffmpeg -r 12 -i processed/%04d.png -vcodec mjpeg ' + movie_file)
+status, output = commands.getstatusoutput('ffmpeg -r 12 -i processed/%04d.png -vcodec mjpeg -q 1 ' + movie_file)
 assert 0 == status
